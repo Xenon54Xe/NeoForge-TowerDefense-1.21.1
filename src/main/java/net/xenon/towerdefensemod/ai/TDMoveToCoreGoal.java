@@ -39,19 +39,18 @@ public class TDMoveToCoreGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        System.out.println("CanUse !");
         // Time between uses
         if (TDData.coreList.isEmpty()){
             return false;
         }
         this.corePos = this.findNearestCore();
-        this.path = this.entity.getNavigation().createPath(this.corePos.x, this.corePos.y, this.corePos.z, 2);
+        this.path = this.entity.getNavigation().createPath(this.corePos.x, this.corePos.y, this.corePos.z, 1);
         return path != null;
     }
 
     @Override
     public boolean canContinueToUse() {
-        return !this.entity.getNavigation().isDone() && !TDData.coreList.isEmpty();
+        return !this.entity.getNavigation().isDone() && !TDData.coreList.isEmpty() && this.entity.position().distanceTo(this.corePos) > 2D;
     }
 
     @Override
@@ -71,7 +70,7 @@ public class TDMoveToCoreGoal extends Goal {
             this.tickUntilNextPathRecalculation += 25;
         }
         if (this.tickUntilNextPathRecalculation >= 25){
-            this.path = this.entity.getNavigation().createPath(this.corePos.x, this.corePos.y, this.corePos.z, 2);
+            this.path = this.entity.getNavigation().createPath(this.corePos.x, this.corePos.y, this.corePos.z, 1);
             this.tickUntilNextPathRecalculation = 0;
         }
         this.tickUntilNextPathRecalculation ++;
