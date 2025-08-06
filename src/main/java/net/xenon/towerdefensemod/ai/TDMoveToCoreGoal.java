@@ -11,10 +11,11 @@ import java.util.EnumSet;
 
 public class TDMoveToCoreGoal extends Goal {
     protected final PathfinderMob entity;
-    protected final double speedModifier;
-    private Vec3 corePos;
+    private final double speedModifier;
+    protected int coreID;
+    protected Vec3 corePos;
     private Path path;
-    private int tickUntilNextPathRecalculation;
+    protected int tickUntilNextPathRecalculation;
 
     public TDMoveToCoreGoal(PathfinderMob entity, double speedModifier){
         this.entity = entity;
@@ -22,35 +23,39 @@ public class TDMoveToCoreGoal extends Goal {
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
-    private Vec3 findNearestCore(){
+    private int findNearestCore(){
+        // Return the index in the TDData positionCoreList of the nearest core
         Vec3 entityPos = this.entity.position();
-        double minDistance = entityPos.distanceTo(TDData.coreList.getFirst());
+        double minDistance = entityPos.distanceTo(TDData.getFirstCore());
         int index = 0;
-        for (int i = 0; i < TDData.coreList.size(); i++){
-            Vec3 corePos = TDData.coreList.get(i);
+        for (int i = 0; i < TDData.getCoreListSize(); i++){
+            Vec3 corePos = TDData.getCore(i);
             double distance = entityPos.distanceTo(corePos);
             if (distance < minDistance){
                 minDistance = distance;
                 index = i;
             }
         }
-        return TDData.coreList.get(index);
+        return index;
     }
 
     @Override
     public boolean canUse() {
         // Time between uses
-        if (TDData.coreList.isEmpty()){
+        if (TDData.isCoreListEmpty()){
             return false;
         }
-        this.corePos = this.findNearestCore();
+
+        int indexCore = this.findNearestCore();
+        this.coreID = TDData.getCoreId(indexCore);
+        this.corePos = TDData.getCore(indexCore);
         this.path = this.entity.getNavigation().createPath(this.corePos.x, this.corePos.y, this.corePos.z, 1);
         return path != null;
     }
 
     @Override
     public boolean canContinueToUse() {
-        return !this.entity.getNavigation().isDone() && !TDData.coreList.isEmpty() && this.entity.position().distanceTo(this.corePos) > 2D;
+        return !this.entity.getNavigation().isDone() && TDData.coreListContainsID(this.coreID) && this.entity.position().distanceTo(this.corePos) > 2D;
     }
 
     @Override
@@ -67,9 +72,9 @@ public class TDMoveToCoreGoal extends Goal {
     @Override
     public void tick() {
         if (!this.entity.getNavigation().moveTo(path, this.speedModifier)){
-            this.tickUntilNextPathRecalculation += 25;
+            this.tickUntilNextPathRecalculation += 30;
         }
-        if (this.tickUntilNextPathRecalculation >= 25){
+        if (this.tickUntilNextPathRecalculation >= 30){
             this.path = this.entity.getNavigation().createPath(this.corePos.x, this.corePos.y, this.corePos.z, 1);
             this.tickUntilNextPathRecalculation = 0;
         }

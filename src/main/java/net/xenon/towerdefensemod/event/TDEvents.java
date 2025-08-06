@@ -10,6 +10,7 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.event.ServerChatEvent;
 import net.neoforged.neoforge.event.entity.EntityJoinLevelEvent;
 import net.xenon.towerdefensemod.TowerDefenseMod;
+import net.xenon.towerdefensemod.ai.TDMoveToCoreCreeperGoal;
 import net.xenon.towerdefensemod.ai.TDMoveToCoreGoal;
 import net.xenon.towerdefensemod.data.TDData;
 
@@ -23,8 +24,8 @@ public class TDEvents extends Event {
         if (mob instanceof Zombie){
             mob.goalSelector.addGoal(8, new TDMoveToCoreGoal(mob, 1));
         }
-        if (mob instanceof Creeper){
-            mob.goalSelector.addGoal(6, new TDMoveToCoreGoal(mob, 1));
+        if (mob instanceof Creeper creeper){
+            mob.goalSelector.addGoal(6, new TDMoveToCoreCreeperGoal(creeper, 1));
         }
         if (mob instanceof AbstractSkeleton && !(mob instanceof WitherSkeleton)){
             mob.goalSelector.addGoal(6, new TDMoveToCoreGoal(mob, 1));
@@ -43,6 +44,15 @@ public class TDEvents extends Event {
         float y = Float.parseFloat(textList[1]);
         float z = Float.parseFloat(textList[2]);
         Vec3 position = new Vec3(x, y, z);
-        TDData.coreList.add(position);
+        if (TDData.coreListContains(position)){
+            System.out.println("Déjà là !");
+            TDData.removeCore(position);
+        }
+        else {
+            System.out.println("Nouveau !");
+            TDData.addCore(position);
+        }
+        System.out.println(TDData.getCoreIDList());
+        System.out.println(TDData.getCorePosList());
     }
 }
