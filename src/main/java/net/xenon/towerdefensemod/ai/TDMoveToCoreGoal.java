@@ -1,5 +1,6 @@
 package net.xenon.towerdefensemod.ai;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.level.pathfinder.Path;
@@ -13,7 +14,7 @@ public class TDMoveToCoreGoal extends Goal {
     protected final PathfinderMob entity;
     private final double speedModifier;
     protected int coreID;
-    protected Vec3 corePos;
+    protected BlockPos corePos;
     private Path path;
     protected int tickUntilNextPathRecalculation;
 
@@ -23,14 +24,14 @@ public class TDMoveToCoreGoal extends Goal {
         this.setFlags(EnumSet.of(Goal.Flag.MOVE));
     }
 
-    private int findNearestCore(){
+    protected int findNearestCore(){
         // Return the index in the TDData positionCoreList of the nearest core
         Vec3 entityPos = this.entity.position();
-        double minDistance = entityPos.distanceTo(TDData.getFirstCore());
+        double minDistance = entityPos.distanceTo(TDData.getFirstCore().getCenter());
         int index = 0;
         for (int i = 0; i < TDData.getCoreListSize(); i++){
-            Vec3 corePos = TDData.getCore(i);
-            double distance = entityPos.distanceTo(corePos);
+            BlockPos corePos = TDData.getCore(i);
+            double distance = entityPos.distanceTo(corePos.getCenter());
             if (distance < minDistance){
                 minDistance = distance;
                 index = i;
@@ -49,13 +50,13 @@ public class TDMoveToCoreGoal extends Goal {
         int indexCore = this.findNearestCore();
         this.coreID = TDData.getCoreId(indexCore);
         this.corePos = TDData.getCore(indexCore);
-        this.path = this.entity.getNavigation().createPath(this.corePos.x, this.corePos.y, this.corePos.z, 1);
+        this.path = this.entity.getNavigation().createPath(this.corePos, 1);
         return path != null;
     }
 
     @Override
     public boolean canContinueToUse() {
-        return !this.entity.getNavigation().isDone() && TDData.coreListContainsID(this.coreID) && this.entity.position().distanceTo(this.corePos) > 2D;
+        return !this.entity.getNavigation().isDone() && TDData.coreListContainsID(this.coreID) && this.entity.position().distanceTo(this.corePos.getCenter()) > 2D;
     }
 
     @Override
@@ -75,7 +76,7 @@ public class TDMoveToCoreGoal extends Goal {
             this.tickUntilNextPathRecalculation += 30;
         }
         if (this.tickUntilNextPathRecalculation >= 30){
-            this.path = this.entity.getNavigation().createPath(this.corePos.x, this.corePos.y, this.corePos.z, 1);
+            this.path = this.entity.getNavigation().createPath(this.corePos, 1);
             this.tickUntilNextPathRecalculation = 0;
         }
         this.tickUntilNextPathRecalculation ++;

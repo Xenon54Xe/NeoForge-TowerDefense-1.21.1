@@ -1,24 +1,24 @@
 package net.xenon.towerdefensemod.data;
 
-import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.BlockPos;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class TDData {
     protected static List<Integer> idCoreList = new ArrayList<>();
-    protected static List<Vec3> positionCoreList = new ArrayList<>();
+    protected static List<BlockPos> positionCoreList = new ArrayList<>();
     private static int idCounter = 1;
 
-    public static void addCore(Vec3 position){
+    public static void addCore(BlockPos position){
         idCoreList.add(idCounter);
         positionCoreList.add(position);
         idCounter++;
     }
 
-    public static void removeCore(Vec3 position){
+    public static void removeCore(BlockPos position){
         for (int i = 0; i < positionCoreList.size(); i++){
-            Vec3 curPos = positionCoreList.get(i);
+            BlockPos curPos = positionCoreList.get(i);
             if (position.equals(curPos)){
                 idCoreList.remove(i);
                 positionCoreList.remove(i);
@@ -27,7 +27,7 @@ public class TDData {
         }
     }
 
-    public static Vec3 getCore(int index){
+    public static BlockPos getCore(int index){
         return positionCoreList.get(index);
     }
 
@@ -35,7 +35,7 @@ public class TDData {
         return idCoreList.get(index);
     }
 
-    public static Vec3 getFirstCore(){
+    public static BlockPos getFirstCore(){
         return positionCoreList.getFirst();
     }
 
@@ -43,7 +43,7 @@ public class TDData {
         return idCoreList.size();
     }
 
-    public static List<Vec3> getCorePosList(){
+    public static List<BlockPos> getCorePosList(){
         return positionCoreList;
     }
 
@@ -51,7 +51,7 @@ public class TDData {
         return idCoreList;
     }
 
-    public static boolean coreListContains(Vec3 position){
+    public static boolean coreListContains(BlockPos position){
         return positionCoreList.contains(position);
     }
 
