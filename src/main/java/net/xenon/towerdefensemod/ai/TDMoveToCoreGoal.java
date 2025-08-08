@@ -17,6 +17,9 @@ public class TDMoveToCoreGoal extends Goal {
     protected BlockPos corePos;
     private Path path;
     protected int tickUntilNextPathRecalculation;
+    protected double lastDistanceToCore;
+    protected boolean canMove = true;
+
 
     public TDMoveToCoreGoal(PathfinderMob entity, double speedModifier){
         this.entity = entity;
@@ -42,11 +45,11 @@ public class TDMoveToCoreGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        // Time between uses
         if (TDData.isCoreListEmpty()){
             return false;
         }
 
+        // Initialisation
         int indexCore = this.findNearestCore();
         this.coreID = TDData.getCoreId(indexCore);
         this.corePos = TDData.getCore(indexCore);
@@ -56,13 +59,15 @@ public class TDMoveToCoreGoal extends Goal {
 
     @Override
     public boolean canContinueToUse() {
-        return !this.entity.getNavigation().isDone() && TDData.coreListContainsID(this.coreID) && this.entity.position().distanceTo(this.corePos.getCenter()) > 2D;
+        return TDData.coreListContainsID(this.coreID) && this.entity.position().distanceTo(this.corePos.getCenter()) > 2D &&
+                this.entity.position().distanceTo(this.corePos.getCenter()) > this.lastDistanceToCore - 1;
     }
 
     @Override
     public void start() {
         this.entity.getNavigation().moveTo(this.path, this.speedModifier);
         this.tickUntilNextPathRecalculation = 0;
+        this.lastDistanceToCore = this.entity.position().distanceTo(this.corePos.getCenter());
     }
 
     @Override
@@ -72,13 +77,31 @@ public class TDMoveToCoreGoal extends Goal {
 
     @Override
     public void tick() {
-        if (!this.entity.getNavigation().moveTo(path, this.speedModifier)){
-            this.tickUntilNextPathRecalculation += 30;
+        if (this.canMove) {
+            if (this.entity.getNavigation().isDone()) {
+                this.lastDistanceToCore = this.entity.position().distanceTo(this.corePos.getCenter());
+            }
+
+            if (!this.entity.getNavigation().moveTo(path, this.speedModifier)) {
+                this.tickUntilNextPathRecalculation += 30;
+            }
+            if (this.tickUntilNextPathRecalculation >= 30 || this.entity.getNavigation().isDone()) {
+                this.path = this.entity.getNavigation().createPath(this.corePos, 1);
+                this.entity.getNavigation().moveTo(this.path, this.speedModifier);
+                this.tickUntilNextPathRecalculation = 0;
+            }
+            this.tickUntilNextPathRecalculation++;
         }
-        if (this.tickUntilNextPathRecalculation >= 30){
-            this.path = this.entity.getNavigation().createPath(this.corePos, 1);
-            this.tickUntilNextPathRecalculation = 0;
-        }
-        this.tickUntilNextPathRecalculation ++;
+    }
+
+    public void doNotMove(){
+        this.canMove = false;
+        this.entity.getNavigation().stop();
+    }
+
+    public void canMove(){
+        this.canMove = true;
+        this.entity.getNavigation().moveTo(this.path, this.speedModifier);
+        this.tickUntilNextPathRecalculation = 0;
     }
 }

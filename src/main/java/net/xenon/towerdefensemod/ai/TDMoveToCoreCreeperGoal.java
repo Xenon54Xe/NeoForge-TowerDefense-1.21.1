@@ -4,8 +4,6 @@ import net.minecraft.world.entity.monster.Creeper;
 import net.xenon.towerdefensemod.data.TDData;
 
 public class TDMoveToCoreCreeperGoal extends TDMoveToCoreGoal {
-    private double minDistanceToCore;
-
     public TDMoveToCoreCreeperGoal(Creeper entity, double speedModifier) {
         super(entity, speedModifier);
     }
@@ -18,18 +16,15 @@ public class TDMoveToCoreCreeperGoal extends TDMoveToCoreGoal {
     @Override
     public void start() {
         super.start();
-        this.minDistanceToCore = this.entity.position().distanceTo(this.corePos.getCenter());
     }
 
     @Override
     public void tick() {
-        super.tick();
-
-        if ((this.entity.getNavigation().isDone() && this.entity.position().distanceTo(this.corePos.getCenter()) >= this.minDistanceToCore - 1) ||
+        if ((this.entity.getNavigation().isDone() && this.entity.position().distanceTo(this.corePos.getCenter()) >= this.lastDistanceToCore - 1) ||
                 this.entity.position().distanceTo(this.corePos.getCenter()) < 2D){
             ((Creeper) this.entity).ignite();
-        } else if (this.entity.getNavigation().isDone()){
-            this.minDistanceToCore = this.entity.position().distanceTo(this.corePos.getCenter());
+            return;
         }
+        super.tick();
     }
 }

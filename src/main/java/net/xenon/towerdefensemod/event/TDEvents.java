@@ -19,10 +19,8 @@ import net.neoforged.neoforge.event.level.ExplosionEvent;
 import net.xenon.towerdefensemod.TowerDefenseMod;
 import net.xenon.towerdefensemod.ai.TDMoveToCoreCreeperGoal;
 import net.xenon.towerdefensemod.ai.TDMoveToCoreGoal;
-import net.xenon.towerdefensemod.ai.TDMoveToCoreZombieGoal;
+import net.xenon.towerdefensemod.ai.TDMoveToCoreZombieMinerGoal;
 import net.xenon.towerdefensemod.data.TDData;
-
-import java.util.List;
 
 @EventBusSubscriber(modid = TowerDefenseMod.MODID)
 public class TDEvents extends Event {
@@ -33,17 +31,17 @@ public class TDEvents extends Event {
         }
         if (mob instanceof Zombie){
             // Donner une pioche à un zombie et donner le goal zombie
-            mob.goalSelector.addGoal(8, new TDMoveToCoreZombieGoal(mob, 1));
+            mob.goalSelector.addGoal(7, new TDMoveToCoreZombieMinerGoal(mob, 1));
             mob.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.WOODEN_PICKAXE));
         }
         if (mob instanceof Creeper creeper){
-            mob.goalSelector.addGoal(6, new TDMoveToCoreCreeperGoal(creeper, 1));
+            mob.goalSelector.addGoal(5, new TDMoveToCoreCreeperGoal(creeper, 1));
         }
         if (mob instanceof AbstractSkeleton && !(mob instanceof WitherSkeleton)){
-            mob.goalSelector.addGoal(6, new TDMoveToCoreGoal(mob, 1));
+            mob.goalSelector.addGoal(5, new TDMoveToCoreGoal(mob, 1));
         }
         if (mob instanceof Spider){
-            mob.goalSelector.addGoal(6, new TDMoveToCoreGoal(mob, 1));
+            mob.goalSelector.addGoal(5, new TDMoveToCoreGoal(mob, 1));
         }
     }
 
