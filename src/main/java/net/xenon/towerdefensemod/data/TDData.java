@@ -16,7 +16,7 @@ public class TDData {
         idCounter++;
     }
 
-    public static void removeCore(BlockPos position){
+    public static void removeCoreFromPosition(BlockPos position){
         for (int i = 0; i < positionCoreList.size(); i++){
             BlockPos curPos = positionCoreList.get(i);
             if (position.equals(curPos)){
@@ -27,23 +27,33 @@ public class TDData {
         }
     }
 
-    public static BlockPos getCore(int index){
+    public static BlockPos getCorePositionFromIndex(int index){
         return positionCoreList.get(index);
     }
 
-    public static int getCoreId(int index){
-        return idCoreList.get(index);
-    }
-
-    public static BlockPos getFirstCore(){
+    public static BlockPos getCorePositionFromID(int id){
+        for (int i = 0; i < idCoreList.size(); i++){
+            int curID = idCoreList.get(i);
+            if (curID == id){
+                return positionCoreList.get(i);
+            }
+        }
         return positionCoreList.getFirst();
     }
 
-    public static int getCoreListSize(){
+    public static int getCoreIdFromIndex(int index){
+        return idCoreList.get(index);
+    }
+
+    public static BlockPos getFirstCorePosition(){
+        return positionCoreList.getFirst();
+    }
+
+    public static int getCoreNumber(){
         return idCoreList.size();
     }
 
-    public static List<BlockPos> getCorePosList(){
+    public static List<BlockPos> getCorePositionList(){
         return positionCoreList;
     }
 
@@ -55,7 +65,7 @@ public class TDData {
         return positionCoreList.contains(position);
     }
 
-    public static boolean coreListContainsID(int id){
+    public static boolean coreListContains(int id){
         return idCoreList.contains(id);
     }
 

@@ -15,10 +15,13 @@ public class TDMoveToCoreZombieMinerGoal extends TDMoveToCoreGoal {
     // Ajouter animation lorsque le zombie casse un block
     // Ajouter la construction de ponts
     private ZombieBehavior zombieBehavior;
-    private final int breakTime = 5; // ticks to break
-    private int ticksBreaking = 0;
+    private final int breakTime = 2; // ticks to break
+    private int ticksBreaking;
+    private final int breakChoiceTime = 20;
+    private int tickUntilNextBreakChoice;
     private List<BlockPos> blockPosToDestroy = new ArrayList<>();
-    private int tickUntilNextBlockBreaking;
+    private int airBlockCount;
+    private boolean isTargetingFakeCore;
 
     public TDMoveToCoreZombieMinerGoal(PathfinderMob entity, double speedModifier) {
         super(entity, speedModifier);
@@ -26,28 +29,34 @@ public class TDMoveToCoreZombieMinerGoal extends TDMoveToCoreGoal {
 
     @Override
     public boolean canContinueToUse() {
-        return TDData.coreListContainsID(this.coreID);
+        return TDData.coreListContains(this.coreID);
     }
 
     @Override
     public void start() {
-        super.start();
         this.changeBehavior(ZombieBehavior.MOVE);
-        this.tickUntilNextBlockBreaking = 0;
         this.ticksBreaking = 0;
+        this.isTargetingFakeCore = false;
+        this.tickUntilNextBreakChoice = this.breakChoiceTime;
+        super.start();
     }
 
     @Override
     public void tick() {
-        System.out.println(this.zombieBehavior);
-        System.out.println(this.lastDistanceToCore);
+        double entityY = this.entity.getY();
+        double coreY = this.corePos.getY();
+        if (this.isTargetingFakeCore && entityY <= coreY){
+            this.stopFarBreak();
+        }
+
         if (this.zombieBehavior == ZombieBehavior.MOVE){
-            if (this.entity.position().distanceTo(this.corePos.getCenter()) < 2D) {
+            if (this.entity.position().distanceTo(this.corePos.getCenter()) < 1.4D) {
                 this.breakCoreInit();
-            }
-            else if (this.entity.getNavigation().isDone() && this.entity.position().distanceTo(this.corePos.getCenter()) >= this.lastDistanceToCore - 1
-                    && this.tickUntilNextBlockBreaking >= 20) {
-                this.makeZombieBuildOrBreak();
+            } else if (this.timeMinDistanceNotImproved > 2) {
+                System.out.println("Berserk mod !");
+            } else if (this.entity.getNavigation().isDone() && this.entity.position().distanceTo(this.corePos.getCenter()) >= this.minDistanceFromCore - 0.2D &&
+                    this.tickUntilNextBreakChoice >= this.breakChoiceTime) {
+                this.makeZombieBuildOrBreak(entityY, coreY);
             }
         } else if (this.zombieBehavior == ZombieBehavior.CORE_BREAKING){
             this.breakCore();
@@ -56,8 +65,8 @@ public class TDMoveToCoreZombieMinerGoal extends TDMoveToCoreGoal {
             this.breakBlocks();
         }
 
-        if (this.tickUntilNextBlockBreaking < 20){
-            this.tickUntilNextBlockBreaking++;
+        if (this.tickUntilNextBreakChoice < this.breakChoiceTime){
+            this.tickUntilNextBreakChoice++;
         }
         super.tick();
     }
@@ -71,20 +80,23 @@ public class TDMoveToCoreZombieMinerGoal extends TDMoveToCoreGoal {
             case CORE_BREAKING, FORWARD_BREAKING, DOWNWARD_BREAKING -> {
                 this.doNotMove();
             }
+            case BERSERK_BREAKING -> {
+
+            }
             case CONSTRUCTING -> {
             }
         }
     }
 
-    public void makeZombieBuildOrBreak(){
+    public void makeZombieBuildOrBreak(double entityY, double coreY) {
         // Choosing between breaking or constructing
-        double entityY = this.entity.getY();
-        double coreY = this.corePos.getY();
-        System.out.println(entityY);
-        System.out.println(coreY);
         if (coreY < entityY){
-            System.out.println("Downward !");
-            this.breakInit(ZombieBehavior.DOWNWARD_BREAKING);
+            if (this.isTargetingFakeCore) {
+                this.breakInit(ZombieBehavior.DOWNWARD_BREAKING);
+            }
+            else {
+                this.farBreakInit(entityY - coreY);
+            }
         } else if (coreY - 1 > entityY) {
             //this.zombieBehavior = ZombieBehavior.CONSTRUCTING;
             return;
@@ -94,22 +106,52 @@ public class TDMoveToCoreZombieMinerGoal extends TDMoveToCoreGoal {
         }
     }
 
+    public void farBreakInit(double deltaY){
+        // Used when the zombie wants to mins downward and the horizontal distance
+        // to travel is not twice as much as the height distance to travel
+        // Change the position of the targeted core in order to force the pathfinding to go straight forward
+        Vec3 vectorZombieToCore = this.corePos.getCenter().subtract(this.entity.position()).normalize();
+        Direction coreDirection = Direction.getNearest(vectorZombieToCore.x, 0, vectorZombieToCore.z);
+        Vec3 newPos = this.entity.position().add(coreDirection.getStepX() * deltaY * 5, 0,coreDirection.getStepZ() * deltaY * 5);
+        this.corePos = new BlockPos((int)newPos.x, this.corePos.getY(), (int)newPos.z);
+        this.isTargetingFakeCore = true;
+        // To recalculate a path directly after
+        this.changeBehavior(ZombieBehavior.MOVE);
+    }
+
+    public void stopFarBreak(){
+        this.corePos = TDData.getCorePositionFromID(this.coreID);
+        this.isTargetingFakeCore = false;
+        this.changeBehavior(ZombieBehavior.MOVE);
+    }
+
     public void breakInit(ZombieBehavior behavior){
         this.changeBehavior(behavior);
         this.ticksBreaking = 0;
         this.blockPosToDestroy.clear();
 
         // Find blocks to destroy
-        Vec3 vectorZombieToCore = this.corePos.getCenter().subtract(this.entity.position()).normalize();
-        Direction coreDirection = Direction.getNearest(vectorZombieToCore.x, 0, vectorZombieToCore.z);
-        BlockPos targetPosFoot = this.entity.blockPosition().relative(coreDirection);
-        BlockPos targetPosEye = this.entity.blockPosition().above(1).relative(coreDirection);
-        this.blockPosToDestroy.add(targetPosEye);
-        this.blockPosToDestroy.add(targetPosFoot);
-        if (behavior == ZombieBehavior.DOWNWARD_BREAKING){
-            BlockPos targetPosUnderFoot = this.entity.blockPosition().above(-1).relative(coreDirection);
-            this.blockPosToDestroy.add(targetPosUnderFoot);
+        // To end properly the downward breaking while targeting fake core
+        if (this.zombieBehavior == ZombieBehavior.DOWNWARD_BREAKING &&
+                this.isTargetingFakeCore && this.entity.position().y <= this.corePos.getCenter().y + 1.5D){
+            BlockPos targetPosBreakStair = this.entity.blockPosition().above(-1);
+            this.blockPosToDestroy.add(targetPosBreakStair);
         }
+        else {
+            Vec3 vectorZombieToCore = this.corePos.getCenter().subtract(this.entity.position()).normalize();
+            Direction coreDirection = Direction.getNearest(vectorZombieToCore.x, 0, vectorZombieToCore.z);
+
+            BlockPos targetPosFoot = this.entity.blockPosition().relative(coreDirection);
+            BlockPos targetPosEye = this.entity.blockPosition().above(1).relative(coreDirection);
+            this.blockPosToDestroy.add(targetPosEye);
+            this.blockPosToDestroy.add(targetPosFoot);
+            if (behavior == ZombieBehavior.DOWNWARD_BREAKING) {
+                BlockPos targetPosUnderFoot = this.entity.blockPosition().above(-1).relative(coreDirection);
+                this.blockPosToDestroy.add(targetPosUnderFoot);
+            }
+        }
+
+        this.airBlockCount = this.blockPosToDestroy.size();
     }
 
     public void breakBlocks(){
@@ -118,31 +160,32 @@ public class TDMoveToCoreZombieMinerGoal extends TDMoveToCoreGoal {
         BlockState targetBlockState = level.getBlockState(targetBlockPos);
 
         if (targetBlockState.isAir()){
-            System.out.println("Air !");
+            this.airBlockCount--;
             this.blockPosToDestroy.removeFirst();
             if (this.blockPosToDestroy.isEmpty()){
-                // Si le zombie arrive dans cette condition c'est que le pathfinding est bloqué sur un block
-                // Solution ?: lui donner pour objectif un core qui est situé très loins dans la direction du core réel et situé à la même hauteur
-                // et le faire miner pour aller là bas
                 this.changeBehavior(ZombieBehavior.MOVE);
-                this.tickUntilNextBlockBreaking = 0;
+                if (this.airBlockCount == 0){
+                    this.tickUntilNextBreakChoice = 0;
+                    if (this.isTargetingFakeCore){
+                        this.stopFarBreak();
+                    }
+                }
             }
             return;
         }
 
-        if (this.entity.position().distanceTo(targetBlockPos.getCenter()) > 2D){
-            System.out.println("Trop loins !");
+        if (this.entity.position().distanceTo(targetBlockPos.getCenter()) > 3D){
             this.changeBehavior(ZombieBehavior.MOVE);
             return;
         }
-
-        System.out.println("Breaking !");
-        System.out.println(this.ticksBreaking);
 
         this.ticksBreaking++;
         if (this.ticksBreaking >= this.breakTime) {
             level.destroyBlock(targetBlockPos, false, this.entity);
             this.blockPosToDestroy.removeFirst();
+            if (TDData.coreListContains(targetBlockPos)){
+                TDData.removeCoreFromPosition(targetBlockPos);
+            }
             this.ticksBreaking = 0;
             if (this.blockPosToDestroy.isEmpty()){
                 this.changeBehavior(ZombieBehavior.MOVE);
@@ -160,7 +203,7 @@ public class TDMoveToCoreZombieMinerGoal extends TDMoveToCoreGoal {
         BlockState coreBlockState = level.getBlockState(this.corePos);
 
         if (coreBlockState.isAir()){
-            TDData.removeCore(this.corePos);
+            TDData.removeCoreFromPosition(this.corePos);
             return;
         }
 
@@ -169,13 +212,10 @@ public class TDMoveToCoreZombieMinerGoal extends TDMoveToCoreGoal {
             return;
         }
 
-        System.out.println("Breaking !");
-        System.out.println(this.ticksBreaking);
-
         this.ticksBreaking++;
         if (this.ticksBreaking >= this.breakTime) {
             level.destroyBlock(this.corePos, false, this.entity);
-            TDData.removeCore(this.corePos);
+            TDData.removeCoreFromPosition(this.corePos);
             this.changeBehavior(ZombieBehavior.MOVE);
             this.ticksBreaking = 0;
         }
@@ -186,7 +226,7 @@ public class TDMoveToCoreZombieMinerGoal extends TDMoveToCoreGoal {
         CORE_BREAKING,
         FORWARD_BREAKING,
         DOWNWARD_BREAKING,
-        FAR_DOWNWARD_BREAKING,
+        BERSERK_BREAKING,
         CONSTRUCTING
     }
 }

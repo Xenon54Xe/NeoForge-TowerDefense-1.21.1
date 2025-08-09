@@ -17,8 +17,10 @@ public class TDMoveToCoreGoal extends Goal {
     protected BlockPos corePos;
     private Path path;
     protected int tickUntilNextPathRecalculation;
-    protected double lastDistanceToCore;
+    protected double minDistanceFromCore;
     protected boolean canMove = true;
+    protected int timeMinDistanceNotImproved;
+
 
 
     public TDMoveToCoreGoal(PathfinderMob entity, double speedModifier){
@@ -30,10 +32,10 @@ public class TDMoveToCoreGoal extends Goal {
     protected int findNearestCore(){
         // Return the index in the TDData positionCoreList of the nearest core
         Vec3 entityPos = this.entity.position();
-        double minDistance = entityPos.distanceTo(TDData.getFirstCore().getCenter());
+        double minDistance = entityPos.distanceTo(TDData.getFirstCorePosition().getCenter());
         int index = 0;
-        for (int i = 0; i < TDData.getCoreListSize(); i++){
-            BlockPos corePos = TDData.getCore(i);
+        for (int i = 0; i < TDData.getCoreNumber(); i++){
+            BlockPos corePos = TDData.getCorePositionFromIndex(i);
             double distance = entityPos.distanceTo(corePos.getCenter());
             if (distance < minDistance){
                 minDistance = distance;
@@ -51,23 +53,24 @@ public class TDMoveToCoreGoal extends Goal {
 
         // Initialisation
         int indexCore = this.findNearestCore();
-        this.coreID = TDData.getCoreId(indexCore);
-        this.corePos = TDData.getCore(indexCore);
+        this.coreID = TDData.getCoreIdFromIndex(indexCore);
+        this.corePos = TDData.getCorePositionFromIndex(indexCore);
         this.path = this.entity.getNavigation().createPath(this.corePos, 1);
         return path != null;
     }
 
     @Override
     public boolean canContinueToUse() {
-        return TDData.coreListContainsID(this.coreID) && this.entity.position().distanceTo(this.corePos.getCenter()) > 2D &&
-                this.entity.position().distanceTo(this.corePos.getCenter()) > this.lastDistanceToCore - 1;
+        return TDData.coreListContains(this.coreID) && this.entity.position().distanceTo(this.corePos.getCenter()) > 2D &&
+                this.entity.position().distanceTo(this.corePos.getCenter()) > this.minDistanceFromCore - 1;
     }
 
     @Override
     public void start() {
         this.entity.getNavigation().moveTo(this.path, this.speedModifier);
+        this.minDistanceFromCore = this.entity.position().distanceTo(this.corePos.getCenter());
         this.tickUntilNextPathRecalculation = 0;
-        this.lastDistanceToCore = this.entity.position().distanceTo(this.corePos.getCenter());
+        this.timeMinDistanceNotImproved = 0;
     }
 
     @Override
@@ -79,29 +82,40 @@ public class TDMoveToCoreGoal extends Goal {
     public void tick() {
         if (this.canMove) {
             if (this.entity.getNavigation().isDone()) {
-                this.lastDistanceToCore = this.entity.position().distanceTo(this.corePos.getCenter());
+                this.improvedMinDistanceFromCore(this.entity.position().distanceTo(this.corePos.getCenter()));
             }
 
-            if (!this.entity.getNavigation().moveTo(path, this.speedModifier)) {
-                this.tickUntilNextPathRecalculation += 30;
-            }
             if (this.tickUntilNextPathRecalculation >= 30 || this.entity.getNavigation().isDone()) {
                 this.path = this.entity.getNavigation().createPath(this.corePos, 1);
                 this.entity.getNavigation().moveTo(this.path, this.speedModifier);
                 this.tickUntilNextPathRecalculation = 0;
             }
+            if (!this.entity.getNavigation().moveTo(path, this.speedModifier)) {
+                this.tickUntilNextPathRecalculation += 30;
+            }
             this.tickUntilNextPathRecalculation++;
         }
     }
 
+    public void improvedMinDistanceFromCore(double distance){
+        if (distance < this.minDistanceFromCore){
+            this.minDistanceFromCore = distance;
+            this.timeMinDistanceNotImproved = 0;
+        }
+        else {
+            this.timeMinDistanceNotImproved++;
+        }
+    }
+
     public void doNotMove(){
-        this.canMove = false;
         this.entity.getNavigation().stop();
+        this.canMove = false;
     }
 
     public void canMove(){
-        this.canMove = true;
+        this.path = this.entity.getNavigation().createPath(this.corePos, 1);
         this.entity.getNavigation().moveTo(this.path, this.speedModifier);
         this.tickUntilNextPathRecalculation = 0;
+        this.canMove = true;
     }
 }

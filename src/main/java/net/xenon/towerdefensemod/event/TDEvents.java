@@ -56,15 +56,13 @@ public class TDEvents extends Event {
         Vec3 position = new Vec3(x, y, z);
         BlockPos blockPos = new BlockPos((int)position.x, (int)position.y, (int)position.z);
         if (TDData.coreListContains(blockPos)){
-            System.out.println("Deja la !");
-            TDData.removeCore(blockPos);
+            TDData.removeCoreFromPosition(blockPos);
         }
         else {
-            System.out.println("Nouveau !");
             TDData.addCore(blockPos);
         }
         System.out.println(TDData.getCoreIDList());
-        System.out.println(TDData.getCorePosList());
+        System.out.println(TDData.getCorePositionList());
     }
 
     @SubscribeEvent
@@ -73,28 +71,26 @@ public class TDEvents extends Event {
             TDData.addCore(event.getPos());
         }
         System.out.println(TDData.getCoreIDList());
-        System.out.println(TDData.getCorePosList());
+        System.out.println(TDData.getCorePositionList());
     }
 
     @SubscribeEvent
     public static void onPlayerRemoveBlock(BlockEvent.BreakEvent event){
         if (!event.getLevel().isClientSide() && TDData.coreListContains(event.getPos())){
-            TDData.removeCore(event.getPos());
+            TDData.removeCoreFromPosition(event.getPos());
         }
         System.out.println(TDData.getCoreIDList());
-        System.out.println(TDData.getCorePosList());
+        System.out.println(TDData.getCorePositionList());
     }
 
     @SubscribeEvent
     public static void onExplosionGrief(ExplosionEvent.Detonate event){
         for (BlockPos blockPos: event.getAffectedBlocks()){
             if (TDData.coreListContains(blockPos)){
-                TDData.removeCore(blockPos);
+                TDData.removeCoreFromPosition(blockPos);
             }
         }
         System.out.println(TDData.getCoreIDList());
-        System.out.println(TDData.getCorePosList());
+        System.out.println(TDData.getCorePositionList());
     }
-
-
 }

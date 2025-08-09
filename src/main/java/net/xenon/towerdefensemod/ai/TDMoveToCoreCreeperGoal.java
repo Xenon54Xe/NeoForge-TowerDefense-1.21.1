@@ -10,18 +10,14 @@ public class TDMoveToCoreCreeperGoal extends TDMoveToCoreGoal {
 
     @Override
     public boolean canContinueToUse() {
-        return TDData.coreListContainsID(this.coreID);
-    }
-
-    @Override
-    public void start() {
-        super.start();
+        return TDData.coreListContains(this.coreID);
     }
 
     @Override
     public void tick() {
-        if ((this.entity.getNavigation().isDone() && this.entity.position().distanceTo(this.corePos.getCenter()) >= this.lastDistanceToCore - 1) ||
+        if ((this.entity.getNavigation().isDone() && this.timeMinDistanceNotImproved > 2) ||
                 this.entity.position().distanceTo(this.corePos.getCenter()) < 2D){
+            this.doNotMove();
             ((Creeper) this.entity).ignite();
             return;
         }
